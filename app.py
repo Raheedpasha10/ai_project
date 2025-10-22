@@ -7,6 +7,7 @@ import requests
 from io import BytesIO
 from datetime import datetime
 import hashlib
+import base64
 
 st.set_page_config(
     page_title="Forensic Dental AI System",
@@ -24,8 +25,40 @@ st.markdown("""
         margin-bottom: 1rem;
         font-weight: 700;
     }
+    .image-container {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+def pil_to_base64(image):
+    """Convert PIL image to base64 for stable display"""
+    buffered = BytesIO()
+    # Convert to RGB if necessary for JPEG format
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    image.save(buffered, format="JPEG", quality=85)
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return f"data:image/jpeg;base64,{img_str}"
+
+def display_image_stable(image, caption, key_suffix=""):
+    """Display image using base64 to avoid cache issues"""
+    try:
+        img_base64 = pil_to_base64(image)
+        st.markdown(
+            f'<div class="image-container">'
+            f'<img src="{img_base64}" style="width:100%; max-width:600px;">'
+            f'<p style="text-align:center; margin:5px 0;"><em>{caption}</em></p>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    except Exception as e:
+        st.error(f"Error displaying image: {str(e)}")
+        # Fallback to regular display
+        st.image(image, caption=caption)
 
 # Dental images
 DENTAL_IMAGE_LIBRARY = {
@@ -53,8 +86,8 @@ def load_dental_image(image_name):
             response = requests.get(DENTAL_IMAGE_LIBRARY[image_name], timeout=10)
             img = Image.open(BytesIO(response.content))
             return img.convert('L')
-    except:
-        pass
+    except Exception as e:
+        st.error(f"Error loading image: {str(e)}")
     return create_simple_xray()
 
 def apply_degradation(image, degradation_type, severity=0.5):
@@ -395,15 +428,16 @@ with st.sidebar:
     selected_image = st.selectbox("Choose image:", list(DENTAL_IMAGE_LIBRARY.keys()))
     
     if st.button("📷 Load Image"):
-        st.session_state.current_image = load_dental_image(selected_image)
-        st.session_state.current_name = selected_image
-        if st.session_state.degraded is not None:
-            st.session_state.degraded = apply_degradation(
-                st.session_state.current_image, 
-                st.session_state.degradation_type, 
-                st.session_state.severity/10
-            )
-        st.success(f"Loaded: {selected_image}")
+        with st.spinner("Loading image..."):
+            st.session_state.current_image = load_dental_image(selected_image)
+            st.session_state.current_name = selected_image
+            if st.session_state.degraded is not None:
+                st.session_state.degraded = apply_degradation(
+                    st.session_state.current_image, 
+                    st.session_state.degradation_type, 
+                    st.session_state.severity/10
+                )
+            st.success(f"Loaded: {selected_image}")
 
 # Tabs
 tab1, tab2, tab3, tab4 = st.tabs(["📷 Evidence", "🔍 Enhancement", "🦷 Analysis", "📄 Report"])
@@ -414,28 +448,29 @@ with tab1:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.image(st.session_state.current_image, caption=st.session_state.current_name)
+        display_image_stable(st.session_state.current_image, st.session_state.current_name, "current")
         
         uploaded_file = st.file_uploader("Upload dental image", type=['jpg', 'jpeg', 'png'], key="file_uploader")
         if uploaded_file is not None:
             try:
-                img = Image.open(uploaded_file).convert('L')
-                st.session_state.current_image = img
-                st.session_state.current_name = uploaded_file.name
-                
-                if st.session_state.degraded is not None:
-                    st.session_state.degraded = apply_degradation(
-                        img, 
-                        st.session_state.degradation_type, 
-                        st.session_state.severity/10
-                    )
-                    st.info("✅ Degradation automatically re-applied to new image")
-                else:
-                    st.session_state.enhanced = None
-                    st.session_state.analysis_done = False
-                
-                st.success("✅ Image uploaded successfully!")
-                
+                with st.spinner("Processing uploaded image..."):
+                    img = Image.open(uploaded_file).convert('L')
+                    st.session_state.current_image = img
+                    st.session_state.current_name = uploaded_file.name
+                    
+                    if st.session_state.degraded is not None:
+                        st.session_state.degraded = apply_degradation(
+                            img, 
+                            st.session_state.degradation_type, 
+                            st.session_state.severity/10
+                        )
+                        st.info("✅ Degradation automatically re-applied to new image")
+                    else:
+                        st.session_state.enhanced = None
+                        st.session_state.analysis_done = False
+                    
+                    st.success("✅ Image uploaded successfully!")
+                    
             except Exception as e:
                 st.error(f"Upload error: {e}")
     
@@ -459,7 +494,7 @@ with tab1:
         
         if st.session_state.degraded is not None:
             st.success("✅ Ready for enhancement!")
-            st.image(st.session_state.degraded, caption="Degraded Image")
+            display_image_stable(st.session_state.degraded, "Degraded Image", "degraded")
         else:
             st.info("👆 Apply degradation to continue")
 
@@ -472,7 +507,7 @@ with tab2:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.image(st.session_state.degraded, caption="Input: Degraded Image")
+            display_image_stable(st.session_state.degraded, "Input: Degraded Image", "degraded_input")
             
             enhance_clicked = st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True, key="enhance_btn")
             
@@ -502,7 +537,7 @@ with tab2:
         
         with col2:
             if st.session_state.enhanced is not None:
-                st.image(st.session_state.enhanced, caption="Output: Enhanced Image")
+                display_image_stable(st.session_state.enhanced, "Output: Enhanced Image", "enhanced")
                 st.success("✅ Unique analysis generated!")
                 
                 if st.session_state.metrics:
@@ -511,7 +546,9 @@ with tab2:
                     st.info(f"Image Fingerprint: {st.session_state.image_fingerprint}")
             else:
                 st.info("👆 Click ENHANCE to generate unique analysis")
-                st.image(st.session_state.degraded, caption="Enhanced image will appear here")
+                # Show placeholder instead of reusing degraded image
+                if st.session_state.degraded:
+                    display_image_stable(st.session_state.degraded, "Enhanced image will appear here", "placeholder")
 
 with tab3:
     st.markdown("### Step 3: Dental Analysis")
@@ -538,7 +575,7 @@ with tab3:
                 
                 st.markdown("#### 🦷 Unique Tooth Chart")
                 chart_img = create_dynamic_tooth_chart(st.session_state.teeth_data, st.session_state.image_fingerprint)
-                st.image(chart_img, caption="Condition-Based Tooth Map")
+                display_image_stable(chart_img, "Condition-Based Tooth Map", "chart")
             
             with col2:
                 st.markdown("#### 📋 Image-Specific Findings")
