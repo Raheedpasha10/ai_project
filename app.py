@@ -1,4 +1,3 @@
-
 # app.py - FORENSIC DENTAL AI SYSTEM
 import streamlit as st
 import numpy as np
@@ -335,52 +334,46 @@ tab1, tab2, tab3, tab4 = st.tabs(["📷 Evidence", "🔍 Enhancement", "🦷 Ana
 with tab1:
     st.markdown("### Step 1: Evidence Preparation")
     
-    col1, col2 = st.columns([2, 1])
+    # Use a single layout approach without nested columns
+    st.image(st.session_state.analysis_data['current_image'], 
+            caption=st.session_state.analysis_data['current_name'])
     
-    with col1:
-        # Display current image using simple st.image
-        st.image(st.session_state.analysis_data['current_image'], 
-                caption=st.session_state.analysis_data['current_name'])
-        
-        uploaded_file = st.file_uploader("Upload dental image", type=['jpg', 'jpeg', 'png'])
-        if uploaded_file is not None:
-            try:
-                img = Image.open(uploaded_file).convert('L')
-                st.session_state.analysis_data['current_image'] = img
-                st.session_state.analysis_data['current_name'] = uploaded_file.name
-                st.session_state.analysis_data['degraded'] = None
-                st.session_state.analysis_data['enhanced'] = None
-                st.session_state.analysis_data['analysis_done'] = False
-                st.success("✅ Image uploaded successfully!")
-            except Exception as e:
-                st.error(f"Upload error: {e}")
+    uploaded_file = st.file_uploader("Upload dental image", type=['jpg', 'jpeg', 'png'])
+    if uploaded_file is not None:
+        try:
+            img = Image.open(uploaded_file).convert('L')
+            st.session_state.analysis_data['current_image'] = img
+            st.session_state.analysis_data['current_name'] = uploaded_file.name
+            st.session_state.analysis_data['degraded'] = None
+            st.session_state.analysis_data['enhanced'] = None
+            st.session_state.analysis_data['analysis_done'] = False
+            st.success("✅ Image uploaded successfully!")
+        except Exception as e:
+            st.error(f"Upload error: {e}")
     
-    with col2:
-        st.markdown("### Apply Degradation")
-        
-        deg_type = st.selectbox("Degradation Type:", 
-                               ["Thermal Damage", "Water Damage", "Trauma Damage"])
-        severity = st.slider("Severity Level:", 1, 10, 5)
-        
-        if st.button("Apply Degradation"):
-            with st.spinner("Applying degradation..."):
-                degraded_img = apply_degradation(
-                    st.session_state.analysis_data['current_image'], 
-                    deg_type, 
-                    severity/10
-                )
-                st.session_state.analysis_data['degraded'] = degraded_img
-                st.session_state.analysis_data['degradation_type'] = deg_type
-                st.session_state.analysis_data['severity'] = severity
-                st.session_state.analysis_data['enhanced'] = None
-                st.session_state.analysis_data['analysis_done'] = False
-                st.success("✅ Degradation applied!")
-        
-        if st.session_state.analysis_data['degraded'] is not None:
-            st.success("✅ Ready for enhancement!")
-            st.image(st.session_state.analysis_data['degraded'], caption="Degraded Image")
-        else:
-            st.info("👆 Apply degradation to continue")
+    st.markdown("### Apply Degradation")
+    
+    deg_type = st.selectbox("Degradation Type:", 
+                           ["Thermal Damage", "Water Damage", "Trauma Damage"])
+    severity = st.slider("Severity Level:", 1, 10, 5)
+    
+    if st.button("Apply Degradation"):
+        with st.spinner("Applying degradation..."):
+            degraded_img = apply_degradation(
+                st.session_state.analysis_data['current_image'], 
+                deg_type, 
+                severity/10
+            )
+            st.session_state.analysis_data['degraded'] = degraded_img
+            st.session_state.analysis_data['degradation_type'] = deg_type
+            st.session_state.analysis_data['severity'] = severity
+            st.session_state.analysis_data['enhanced'] = None
+            st.session_state.analysis_data['analysis_done'] = False
+            st.success("✅ Degradation applied!")
+    
+    if st.session_state.analysis_data['degraded'] is not None:
+        st.success("✅ Ready for enhancement!")
+        st.image(st.session_state.analysis_data['degraded'], caption="Degraded Image")
 
 with tab2:
     st.markdown("### Step 2: AI Enhancement")
@@ -388,61 +381,47 @@ with tab2:
     if st.session_state.analysis_data['degraded'] is None:
         st.error("❌ Please apply degradation first in the Evidence tab!")
     else:
-        col1, col2 = st.columns(2)
+        # Use a single column layout for this tab
+        st.markdown("#### **Input: Degraded Image**")
+        st.image(st.session_state.analysis_data['degraded'], caption="")
         
-        with col1:
-            st.markdown("#### **Input: Degraded Image**")
-            st.image(st.session_state.analysis_data['degraded'], caption="")
-            
-            if st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True):
-                try:
-                    with st.spinner("Enhancing image..."):
-                        # Create enhanced image
-                        enhanced_img = enhance_image(st.session_state.analysis_data['degraded'])
-                        st.session_state.analysis_data['enhanced'] = enhanced_img
-                        
-                        # Generate analysis
-                        fingerprint = generate_image_fingerprint(enhanced_img)
-                        st.session_state.analysis_data['image_fingerprint'] = fingerprint
-                        st.session_state.analysis_data['teeth_data'] = detect_teeth_based_on_image(enhanced_img)
-                        st.session_state.analysis_data['metrics'] = calculate_forensic_metrics(
-                            st.session_state.analysis_data['degraded'], 
-                            enhanced_img, 
-                            st.session_state.analysis_data['teeth_data']
-                        )
-                        
-                        st.session_state.analysis_data['analysis_done'] = True
-                        st.success("✅ Enhancement & Analysis completed!")
-                        
-                except Exception as e:
-                    st.error(f"Enhancement failed: {str(e)}")
-        
-        with col2:
-            st.markdown("#### **Output: Enhanced Image**")
-            
-            if st.session_state.analysis_data['enhanced'] is not None:
-                # Display enhanced image
-                st.image(st.session_state.analysis_data['enhanced'], caption="")
-                
-                st.markdown('<div class="success-box">✅ Unique analysis generated!</div>', unsafe_allow_html=True)
-                
-                # Show metrics
-                metrics = st.session_state.analysis_data['metrics']
-                if metrics:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
-                    with col2:
-                        st.metric("Distinctive Features", metrics['distinctive_features'])
+        if st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True):
+            try:
+                with st.spinner("Enhancing image..."):
+                    # Create enhanced image
+                    enhanced_img = enhance_image(st.session_state.analysis_data['degraded'])
+                    st.session_state.analysis_data['enhanced'] = enhanced_img
                     
-                    st.info(f"**Image Fingerprint:** {st.session_state.analysis_data['image_fingerprint']}")
-            else:
-                st.info("👆 Click **ENHANCE IMAGE** to process")
-                # Show placeholder
-                placeholder = Image.new('RGB', (400, 300), color='#f0f2f6')
-                draw = ImageDraw.Draw(placeholder)
-                draw.text((120, 140), "Enhanced image will appear here", fill='#666666')
-                st.image(placeholder, caption="")
+                    # Generate analysis
+                    fingerprint = generate_image_fingerprint(enhanced_img)
+                    st.session_state.analysis_data['image_fingerprint'] = fingerprint
+                    st.session_state.analysis_data['teeth_data'] = detect_teeth_based_on_image(enhanced_img)
+                    st.session_state.analysis_data['metrics'] = calculate_forensic_metrics(
+                        st.session_state.analysis_data['degraded'], 
+                        enhanced_img, 
+                        st.session_state.analysis_data['teeth_data']
+                    )
+                    
+                    st.session_state.analysis_data['analysis_done'] = True
+                    st.success("✅ Enhancement & Analysis completed!")
+                    
+            except Exception as e:
+                st.error(f"Enhancement failed: {str(e)}")
+        
+        if st.session_state.analysis_data['enhanced'] is not None:
+            st.markdown("#### **Output: Enhanced Image**")
+            st.image(st.session_state.analysis_data['enhanced'], caption="")
+            
+            st.markdown('<div class="success-box">✅ Unique analysis generated!</div>', unsafe_allow_html=True)
+            
+            # Show metrics in a simple layout
+            metrics = st.session_state.analysis_data['metrics']
+            if metrics:
+                st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
+                st.metric("Distinctive Features", metrics['distinctive_features'])
+                st.metric("Forensic Utility", f"{metrics['forensic_utility']}%")
+                
+                st.info(f"**Image Fingerprint:** {st.session_state.analysis_data['image_fingerprint']}")
 
 with tab3:
     st.markdown("### Step 3: Dental Analysis")
@@ -452,44 +431,36 @@ with tab3:
     else:
         st.success("🦷 Dental Analysis Complete!")
         
-        col1, col2 = st.columns(2)
+        metrics = st.session_state.analysis_data['metrics']
+        teeth_data = st.session_state.analysis_data['teeth_data']
         
-        with col1:
-            st.markdown("#### 📊 Analysis Metrics")
-            
-            metrics = st.session_state.analysis_data['metrics']
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Forensic Utility", f"{metrics['forensic_utility']}%")
-                st.metric("Clarity Score", f"{metrics['image_clarity']}%")
-            with col2:
-                st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
-                st.metric("Dental Health", f"{metrics['dental_health_score']}%")
-            
-            st.markdown("#### 🦷 Tooth Chart")
-            chart_img = create_tooth_chart(st.session_state.analysis_data['teeth_data'])
-            st.image(chart_img, caption="Dental Analysis Chart")
+        st.markdown("#### 📊 Analysis Metrics")
         
-        with col2:
-            st.markdown("#### 📋 Detailed Findings")
-            
-            teeth_data = st.session_state.analysis_data['teeth_data']
-            healthy_count = len([t for t in teeth_data if t["condition"] == "Healthy"])
-            treated_count = len([t for t in teeth_data if t["condition"] in ["Filled", "Crowned", "Root Canal"]])
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Healthy Teeth", healthy_count)
-            with col2:
-                st.metric("Treated Teeth", treated_count)
-            
-            st.markdown("#### Tooth-by-Tooth Analysis")
-            for tooth in teeth_data:
-                with st.expander(f"Tooth {tooth['number']} - {tooth['name']}"):
-                    st.write(f"**Condition:** {tooth['condition']}")
-                    st.write(f"**Confidence:** {tooth['confidence']*100:.1f}%")
-                    if tooth["condition"] != "Healthy":
-                        st.info(f"Distinctive feature for identification")
+        # Simple metrics display without columns
+        st.metric("Forensic Utility", f"{metrics['forensic_utility']}%")
+        st.metric("Clarity Score", f"{metrics['image_clarity']}%")
+        st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
+        st.metric("Dental Health", f"{metrics['dental_health_score']}%")
+        
+        st.markdown("#### 🦷 Tooth Chart")
+        chart_img = create_tooth_chart(teeth_data)
+        st.image(chart_img, caption="Dental Analysis Chart")
+        
+        st.markdown("#### 📋 Detailed Findings")
+        
+        healthy_count = len([t for t in teeth_data if t["condition"] == "Healthy"])
+        treated_count = len([t for t in teeth_data if t["condition"] in ["Filled", "Crowned", "Root Canal"]])
+        
+        st.metric("Healthy Teeth", healthy_count)
+        st.metric("Treated Teeth", treated_count)
+        
+        st.markdown("#### Tooth-by-Tooth Analysis")
+        for tooth in teeth_data:
+            with st.expander(f"Tooth {tooth['number']} - {tooth['name']}"):
+                st.write(f"**Condition:** {tooth['condition']}")
+                st.write(f"**Confidence:** {tooth['confidence']*100:.1f}%")
+                if tooth["condition"] != "Healthy":
+                    st.info(f"Distinctive feature for identification")
 
 with tab4:
     st.markdown("### Step 4: Forensic Report")
