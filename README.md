@@ -1,4 +1,3 @@
-# forensic-dental-ai
 # Forensic Dental AI System
 
 A Streamlit web application for forensic dental analysis and image enhancement.
@@ -9,4 +8,5 @@ A Streamlit web application for forensic dental analysis and image enhancement.
 - Forensic analysis and reporting
 - Dental feature detection
 
-
+## Deployment
+Deployed on Streamlit Cloud: [your-app-link]
