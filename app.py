@@ -30,6 +30,11 @@ st.markdown("""
         border-radius: 5px;
         padding: 10px;
         margin: 10px 0;
+        text-align: center;
+    }
+    .enhance-button {
+        width: 100%;
+        margin: 20px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -50,8 +55,8 @@ def display_image_stable(image, caption, key_suffix=""):
         img_base64 = pil_to_base64(image)
         st.markdown(
             f'<div class="image-container">'
-            f'<img src="{img_base64}" style="width:100%; max-width:600px;">'
-            f'<p style="text-align:center; margin:5px 0;"><em>{caption}</em></p>'
+            f'<img src="{img_base64}" style="width:100%; max-width:500px; height:auto;">'
+            f'<p style="text-align:center; margin:10px 0; font-weight:bold;">{caption}</p>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -507,13 +512,14 @@ with tab2:
         col1, col2 = st.columns(2)
         
         with col1:
-            display_image_stable(st.session_state.degraded, "Input: Degraded Image", "degraded_input")
+            st.markdown("#### **Input: Degraded Image**")
+            display_image_stable(st.session_state.degraded, "", "degraded_input")
             
-            enhance_clicked = st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True, key="enhance_btn")
-            
-            if enhance_clicked:
+            # Enhancement button
+            if st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True, key="enhance_btn"):
                 try:
                     with st.spinner("Enhancing image... This will generate unique analysis..."):
+                        # Clear previous enhancement
                         st.session_state.enhanced = None
                         st.session_state.analysis_done = False
                         
@@ -530,73 +536,95 @@ with tab2:
                         
                         st.session_state.analysis_done = True
                         st.success("✅ Enhancement & Analysis completed!")
+                        # Force a rerun to update the display
                         st.rerun()
                         
                 except Exception as e:
                     st.error(f"Enhancement failed: {str(e)}")
         
         with col2:
+            st.markdown("#### **Output: Enhanced Image**")
+            
             if st.session_state.enhanced is not None:
-                display_image_stable(st.session_state.enhanced, "Output: Enhanced Image", "enhanced")
+                # Show enhanced image
+                display_image_stable(st.session_state.enhanced, "", "enhanced")
                 st.success("✅ Unique analysis generated!")
                 
+                # Show metrics
                 if st.session_state.metrics:
-                    st.metric("ID Confidence", f"{st.session_state.metrics['identification_confidence']}%")
-                    st.metric("Distinctive Features", st.session_state.metrics['distinctive_features'])
-                    st.info(f"Image Fingerprint: {st.session_state.image_fingerprint}")
+                    col_metric1, col_metric2 = st.columns(2)
+                    with col_metric1:
+                        st.metric("ID Confidence", f"{st.session_state.metrics['identification_confidence']}%")
+                    with col_metric2:
+                        st.metric("Distinctive Features", st.session_state.metrics['distinctive_features'])
+                    
+                    st.info(f"**Image Fingerprint:** {st.session_state.image_fingerprint}")
+                    
+                    # Show quality improvements
+                    st.markdown("##### Quality Improvements")
+                    imp_col1, imp_col2 = st.columns(2)
+                    with imp_col1:
+                        st.metric("Clarity Improvement", f"+{st.session_state.metrics['clarity_improvement']}%")
+                    with imp_col2:
+                        st.metric("Sharpness Improvement", f"+{st.session_state.metrics['sharpness_improvement']}%")
             else:
-                st.info("👆 Click ENHANCE to generate unique analysis")
-                # Show placeholder instead of reusing degraded image
-                if st.session_state.degraded:
-                    display_image_stable(st.session_state.degraded, "Enhanced image will appear here", "placeholder")
+                # Show placeholder when no enhancement yet
+                st.info("👆 Click **ENHANCE IMAGE** to process the degraded image")
+                # Create a placeholder image
+                placeholder = Image.new('RGB', (400, 300), color='#f0f0f0')
+                draw = ImageDraw.Draw(placeholder)
+                draw.text((100, 140), "Enhanced image will appear here", fill='#666666')
+                display_image_stable(placeholder, "Waiting for enhancement", "placeholder")
 
 with tab3:
     st.markdown("### Step 3: Dental Analysis")
     
     if st.session_state.enhanced is None:
-        st.warning("⚠️ Please complete enhancement first.")
+        st.warning("⚠️ Please complete enhancement first in the Enhancement tab.")
     else:
         st.success("🦷 Unique Dental Analysis Generated!")
         
-        with st.spinner("Finalizing analysis..."):
-            time.sleep(1)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 📊 Dynamic Metrics")
             
-            col1, col2 = st.columns(2)
+            # Metrics in two columns
+            m1, m2 = st.columns(2)
+            with m1:
+                st.metric("Forensic Utility", f"{st.session_state.metrics['forensic_utility']}%")
+                st.metric("Clarity Score", f"{st.session_state.metrics['image_clarity']}%")
+            with m2:
+                st.metric("ID Confidence", f"{st.session_state.metrics['identification_confidence']}%")
+                st.metric("Dental Health", f"{st.session_state.metrics['dental_health_score']}%")
             
-            with col1:
-                st.markdown("#### 📊 Dynamic Metrics")
-                m1, m2 = st.columns(2)
-                with m1:
-                    st.metric("Forensic Utility", f"{st.session_state.metrics['forensic_utility']}%")
-                    st.metric("Clarity Score", f"{st.session_state.metrics['image_clarity']}%")
-                with m2:
-                    st.metric("ID Confidence", f"{st.session_state.metrics['identification_confidence']}%")
-                    st.metric("Dental Health", f"{st.session_state.metrics['dental_health_score']}%")
-                
-                st.markdown("#### 🦷 Unique Tooth Chart")
-                chart_img = create_dynamic_tooth_chart(st.session_state.teeth_data, st.session_state.image_fingerprint)
-                display_image_stable(chart_img, "Condition-Based Tooth Map", "chart")
+            st.markdown("#### 🦷 Unique Tooth Chart")
+            chart_img = create_dynamic_tooth_chart(st.session_state.teeth_data, st.session_state.image_fingerprint)
+            display_image_stable(chart_img, "Condition-Based Tooth Map", "chart")
+        
+        with col2:
+            st.markdown("#### 📋 Image-Specific Findings")
             
-            with col2:
-                st.markdown("#### 📋 Image-Specific Findings")
-                
-                # Summary based on actual analysis
-                healthy_count = len([t for t in st.session_state.teeth_data if t["condition"] == "Healthy"])
-                treated_count = len([t for t in st.session_state.teeth_data if t["condition"] in ["Filled", "Crowned", "Root Canal"]])
-                
-                st1, st2 = st.columns(2)
-                with st1:
-                    st.metric("Healthy Teeth", healthy_count)
-                with st2:
-                    st.metric("Treated Teeth", treated_count)
-                
-                st.markdown("#### Detailed Tooth Analysis")
-                for tooth in st.session_state.teeth_data:
-                    with st.expander(f"Tooth {tooth['number']} - {tooth['name']} ({tooth['type']})"):
-                        st.write(f"**Condition:** {tooth['condition']}")
-                        st.write(f"**Confidence:** {tooth['confidence']*100:.1f}%")
-                        if tooth["condition"] != "Healthy":
-                            st.info(f"**Identifying Feature**: {tooth['condition']} provides distinctive marker")
+            # Summary statistics
+            healthy_count = len([t for t in st.session_state.teeth_data if t["condition"] == "Healthy"])
+            treated_count = len([t for t in st.session_state.teeth_data if t["condition"] in ["Filled", "Crowned", "Root Canal"]])
+            issue_count = len([t for t in st.session_state.teeth_data if t["condition"] in ["Impacted", "Missing", "Carious"]])
+            
+            st1, st2, st3 = st.columns(3)
+            with st1:
+                st.metric("Healthy Teeth", healthy_count)
+            with st2:
+                st.metric("Treated Teeth", treated_count)
+            with st3:
+                st.metric("Issues Found", issue_count)
+            
+            st.markdown("#### Detailed Tooth Analysis")
+            for tooth in st.session_state.teeth_data:
+                with st.expander(f"Tooth {tooth['number']} - {tooth['name']} ({tooth['type']})"):
+                    st.write(f"**Condition:** {tooth['condition']}")
+                    st.write(f"**Confidence:** {tooth['confidence']*100:.1f}%")
+                    if tooth["condition"] != "Healthy":
+                        st.info(f"**Identifying Feature**: {tooth['condition']} provides distinctive marker")
 
 with tab4:
     st.markdown("### Step 4: Unique Forensic Report")
