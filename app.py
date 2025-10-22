@@ -414,7 +414,7 @@ with tab1:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.image(st.session_state.current_image, use_container_width=True, caption=st.session_state.current_name)
+        st.image(st.session_state.current_image, caption=st.session_state.current_name)
         
         uploaded_file = st.file_uploader("Upload dental image", type=['jpg', 'jpeg', 'png'], key="file_uploader")
         if uploaded_file is not None:
@@ -459,7 +459,7 @@ with tab1:
         
         if st.session_state.degraded is not None:
             st.success("✅ Ready for enhancement!")
-            st.image(st.session_state.degraded, use_container_width=True, caption="Degraded Image")
+            st.image(st.session_state.degraded, caption="Degraded Image")
         else:
             st.info("👆 Apply degradation to continue")
 
@@ -472,7 +472,7 @@ with tab2:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.image(st.session_state.degraded, use_container_width=True, caption="Input: Degraded Image")
+            st.image(st.session_state.degraded, caption="Input: Degraded Image")
             
             enhance_clicked = st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True, key="enhance_btn")
             
@@ -502,7 +502,7 @@ with tab2:
         
         with col2:
             if st.session_state.enhanced is not None:
-                st.image(st.session_state.enhanced, use_container_width=True, caption="Output: Enhanced Image")
+                st.image(st.session_state.enhanced, caption="Output: Enhanced Image")
                 st.success("✅ Unique analysis generated!")
                 
                 if st.session_state.metrics:
@@ -511,7 +511,7 @@ with tab2:
                     st.info(f"Image Fingerprint: {st.session_state.image_fingerprint}")
             else:
                 st.info("👆 Click ENHANCE to generate unique analysis")
-                st.image(st.session_state.degraded, use_container_width=True, caption="Enhanced image will appear here")
+                st.image(st.session_state.degraded, caption="Enhanced image will appear here")
 
 with tab3:
     st.markdown("### Step 3: Dental Analysis")
@@ -538,7 +538,7 @@ with tab3:
                 
                 st.markdown("#### 🦷 Unique Tooth Chart")
                 chart_img = create_dynamic_tooth_chart(st.session_state.teeth_data, st.session_state.image_fingerprint)
-                st.image(chart_img, use_container_width=True, caption="Condition-Based Tooth Map")
+                st.image(chart_img, caption="Condition-Based Tooth Map")
             
             with col2:
                 st.markdown("#### 📋 Image-Specific Findings")
