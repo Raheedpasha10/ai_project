@@ -42,3 +42,11 @@ The Forensic Dental AI System assists forensic odontologists and dental professi
    ```bash
    git clone https://github.com/pranathi-a11y/forensic-dental-ai.git
    cd forensic-dental-ai
+
+2. Install dependencies:
+      pip install -r requirements.txt
+   
+4. Run the app:
+   streamlit run src/app.py
+   
+5. Open http://localhost:8501 in your browser.
