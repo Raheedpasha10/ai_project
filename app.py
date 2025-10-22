@@ -31,6 +31,13 @@ st.markdown("""
         padding: 15px;
         margin: 10px 0;
     }
+    .warning-box {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -334,11 +341,12 @@ tab1, tab2, tab3, tab4 = st.tabs(["📷 Evidence", "🔍 Enhancement", "🦷 Ana
 with tab1:
     st.markdown("### Step 1: Evidence Preparation")
     
-    # Use a single layout approach without nested columns
+    # Display current image
     st.image(st.session_state.analysis_data['current_image'], 
             caption=st.session_state.analysis_data['current_name'])
     
-    uploaded_file = st.file_uploader("Upload dental image", type=['jpg', 'jpeg', 'png'])
+    # Image upload
+    uploaded_file = st.file_uploader("Upload dental image", type=['jpg', 'jpeg', 'png'], key="file_uploader")
     if uploaded_file is not None:
         try:
             img = Image.open(uploaded_file).convert('L')
@@ -348,16 +356,18 @@ with tab1:
             st.session_state.analysis_data['enhanced'] = None
             st.session_state.analysis_data['analysis_done'] = False
             st.success("✅ Image uploaded successfully!")
+            st.rerun()  # Force refresh to update the display
         except Exception as e:
             st.error(f"Upload error: {e}")
     
     st.markdown("### Apply Degradation")
     
     deg_type = st.selectbox("Degradation Type:", 
-                           ["Thermal Damage", "Water Damage", "Trauma Damage"])
-    severity = st.slider("Severity Level:", 1, 10, 5)
+                           ["Thermal Damage", "Water Damage", "Trauma Damage"],
+                           key="deg_type")
+    severity = st.slider("Severity Level:", 1, 10, 5, key="severity_slider")
     
-    if st.button("Apply Degradation"):
+    if st.button("Apply Degradation", key="apply_deg"):
         with st.spinner("Applying degradation..."):
             degraded_img = apply_degradation(
                 st.session_state.analysis_data['current_image'], 
@@ -370,24 +380,30 @@ with tab1:
             st.session_state.analysis_data['enhanced'] = None
             st.session_state.analysis_data['analysis_done'] = False
             st.success("✅ Degradation applied!")
+            st.rerun()  # Force refresh to update the display
     
+    # Show degraded image if available
     if st.session_state.analysis_data['degraded'] is not None:
+        st.markdown("### Degraded Image")
+        st.image(st.session_state.analysis_data['degraded'], caption="Ready for enhancement")
         st.success("✅ Ready for enhancement!")
-        st.image(st.session_state.analysis_data['degraded'], caption="Degraded Image")
+    else:
+        st.markdown('<div class="warning-box">⚠️ Apply degradation to continue to enhancement</div>', unsafe_allow_html=True)
 
 with tab2:
     st.markdown("### Step 2: AI Enhancement")
     
     if st.session_state.analysis_data['degraded'] is None:
         st.error("❌ Please apply degradation first in the Evidence tab!")
+        st.info("Go to the **Evidence** tab, upload or select an image, then click 'Apply Degradation'")
     else:
-        # Use a single column layout for this tab
-        st.markdown("#### **Input: Degraded Image**")
+        st.markdown("#### Input: Degraded Image")
         st.image(st.session_state.analysis_data['degraded'], caption="")
         
-        if st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True):
+        # Enhancement button
+        if st.button("🚀 ENHANCE IMAGE", type="primary", use_container_width=True, key="enhance_btn"):
             try:
-                with st.spinner("Enhancing image..."):
+                with st.spinner("Enhancing image and generating analysis..."):
                     # Create enhanced image
                     enhanced_img = enhance_image(st.session_state.analysis_data['degraded'])
                     st.session_state.analysis_data['enhanced'] = enhanced_img
@@ -404,17 +420,19 @@ with tab2:
                     
                     st.session_state.analysis_data['analysis_done'] = True
                     st.success("✅ Enhancement & Analysis completed!")
+                    st.rerun()  # Force refresh to show enhanced image
                     
             except Exception as e:
                 st.error(f"Enhancement failed: {str(e)}")
         
+        # Show enhanced image if available
         if st.session_state.analysis_data['enhanced'] is not None:
-            st.markdown("#### **Output: Enhanced Image**")
+            st.markdown("#### Output: Enhanced Image")
             st.image(st.session_state.analysis_data['enhanced'], caption="")
             
             st.markdown('<div class="success-box">✅ Unique analysis generated!</div>', unsafe_allow_html=True)
             
-            # Show metrics in a simple layout
+            # Show metrics
             metrics = st.session_state.analysis_data['metrics']
             if metrics:
                 st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
@@ -422,12 +440,14 @@ with tab2:
                 st.metric("Forensic Utility", f"{metrics['forensic_utility']}%")
                 
                 st.info(f"**Image Fingerprint:** {st.session_state.analysis_data['image_fingerprint']}")
+        else:
+            st.info("👆 Click **ENHANCE IMAGE** to process the degraded image")
 
 with tab3:
     st.markdown("### Step 3: Dental Analysis")
     
     if not st.session_state.analysis_data['analysis_done']:
-        st.warning("⚠️ Please complete enhancement first.")
+        st.warning("⚠️ Please complete enhancement first in the Enhancement tab.")
     else:
         st.success("🦷 Dental Analysis Complete!")
         
@@ -436,11 +456,16 @@ with tab3:
         
         st.markdown("#### 📊 Analysis Metrics")
         
-        # Simple metrics display without columns
-        st.metric("Forensic Utility", f"{metrics['forensic_utility']}%")
-        st.metric("Clarity Score", f"{metrics['image_clarity']}%")
-        st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
-        st.metric("Dental Health", f"{metrics['dental_health_score']}%")
+        # Metrics display
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Forensic Utility", f"{metrics['forensic_utility']}%")
+        with col2:
+            st.metric("Clarity Score", f"{metrics['image_clarity']}%")
+        with col3:
+            st.metric("ID Confidence", f"{metrics['identification_confidence']}%")
+        with col4:
+            st.metric("Dental Health", f"{metrics['dental_health_score']}%")
         
         st.markdown("#### 🦷 Tooth Chart")
         chart_img = create_tooth_chart(teeth_data)
@@ -450,23 +475,29 @@ with tab3:
         
         healthy_count = len([t for t in teeth_data if t["condition"] == "Healthy"])
         treated_count = len([t for t in teeth_data if t["condition"] in ["Filled", "Crowned", "Root Canal"]])
+        issue_count = len([t for t in teeth_data if t["condition"] in ["Impacted", "Missing", "Carious"]])
         
-        st.metric("Healthy Teeth", healthy_count)
-        st.metric("Treated Teeth", treated_count)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Healthy Teeth", healthy_count)
+        with col2:
+            st.metric("Treated Teeth", treated_count)
+        with col3:
+            st.metric("Issues Found", issue_count)
         
         st.markdown("#### Tooth-by-Tooth Analysis")
         for tooth in teeth_data:
-            with st.expander(f"Tooth {tooth['number']} - {tooth['name']}"):
+            with st.expander(f"Tooth {tooth['number']} - {tooth['name']} ({tooth['type']})"):
                 st.write(f"**Condition:** {tooth['condition']}")
                 st.write(f"**Confidence:** {tooth['confidence']*100:.1f}%")
                 if tooth["condition"] != "Healthy":
-                    st.info(f"Distinctive feature for identification")
+                    st.info(f"**Identifying Feature**: {tooth['condition']} provides distinctive marker")
 
 with tab4:
     st.markdown("### Step 4: Forensic Report")
     
     if not st.session_state.analysis_data['analysis_done']:
-        st.warning("Please complete the analysis first.")
+        st.warning("Please complete the enhancement and analysis first.")
     else:
         case_data = {
             'case_id': f"DENT-{datetime.now().strftime('%Y%m%d-%H%M')}",
